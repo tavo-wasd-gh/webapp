@@ -3,8 +3,8 @@ package database
 import (
 	"database/sql"
 
-	"github.com/tavo-wasd-gh/webtoolkit/logger"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/tavo-wasd-gh/webtoolkit/logger"
 )
 
 func Init(connDvr, connStr string) (*sql.DB, error) {
