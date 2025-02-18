@@ -118,7 +118,8 @@ func (app *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		insertData,
 	); err != nil {
 		app.Log.Errorf("error inserting into db: %v", err)
-		http.Error(w, "user error", http.StatusInternalServerError)
+		http.Error(w, "", http.StatusInternalServerError)
+		return
 	}
 
 	// Batch query
@@ -126,13 +127,14 @@ func (app *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	if err := app.DB.Select(&data, "SELECT * FROM data"); err != nil {
 		app.Log.Errorf("error querying from db: %v", err)
-		http.Error(w, "user error", http.StatusInternalServerError)
+		http.Error(w, "", http.StatusInternalServerError)
+		return
 	}
 
 	// Render view
 	if err := views.Render(w, app.Views["dashboard.html"], data); err != nil {
-		app.Log.Errorf("Error rendering template: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		app.Log.Errorf("error rendering template: %v", err)
+		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
 }
