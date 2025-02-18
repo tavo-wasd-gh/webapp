@@ -45,7 +45,7 @@ func main() {
 		log.Fatalf("%v", logger.Errorf("failed to initialize views: %v", err))
 	}
 
-	// Defaults to "sqlite3" and "./db.db" if not set
+	// Defaults to "sqlite3" and "./db.db" if not set, modify in database/database.go
 	db, err := database.Init(env.DBConnDvr, env.DBConnStr)
 	if err != nil {
 		log.Fatalf("%v", logger.Errorf("failed to initialize database: %v", err))
@@ -90,6 +90,10 @@ func (app *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Logging example
+	app.Log.Printf("New dashboard request")
+
+	// Database example
 	var schema = `
 		CREATE TABLE data (
 		title NOT NULL,
@@ -102,9 +106,6 @@ func (app *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		Title   string `db:"title"`
 		Message string `db:"message"`
 	}
-
-	// Logging example
-	app.Log.Printf("New dashboard request")
 
 	// Batch insert
 	insertData := []Data{
