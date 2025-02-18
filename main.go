@@ -94,7 +94,8 @@ func (app *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		CREATE TABLE data (
 		title NOT NULL,
 		message NOT NULL
-		);`
+	);`
+
 	app.DB.MustExec(schema)
 
 	type Data struct {
