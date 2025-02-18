@@ -9,7 +9,7 @@ import (
 	"github.com/tavo-wasd-gh/webtoolkit/logger"
 )
 
-type Config struct {
+type Env struct {
 	Production bool   `env:"PRODUCTION"`
 	Debug      bool   `env:"DEBUG"`
 	Port       string `env:"PORT" req:"1"`
@@ -18,11 +18,11 @@ type Config struct {
 	DBConnStr  string `env:"DB_CONNSTR"`
 }
 
-func Init() (*Config, error) {
+func Init() (*Env, error) {
 	godotenv.Load()
 
 	var missing []string
-	cfg := &Config{}
+	cfg := &Env{}
 
 	t := reflect.TypeOf(*cfg)
 	v := reflect.ValueOf(cfg).Elem()

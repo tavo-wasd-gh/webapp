@@ -1,13 +1,12 @@
 package database
 
 import (
-	"database/sql"
-
+	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tavo-wasd-gh/webtoolkit/logger"
 )
 
-func Init(connDvr, connStr string) (*sql.DB, error) {
+func Init(connDvr, connStr string) (*sqlx.DB, error) {
 	if connDvr == "" {
 		connDvr = "sqlite3"
 	}
@@ -16,7 +15,7 @@ func Init(connDvr, connStr string) (*sql.DB, error) {
 		connStr = "./db.db"
 	}
 
-	db, err := sql.Open(connDvr, connStr)
+	db, err := sqlx.Open(connDvr, connStr)
 	if err != nil {
 		return nil, logger.Errorf("error opening connection: %v", err)
 	}

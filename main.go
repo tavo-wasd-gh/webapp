@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"embed"
 	"html/template"
 	"io/fs"
@@ -11,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/tavo-wasd-gh/webapp/config"
 	"github.com/tavo-wasd-gh/webapp/database"
 	"github.com/tavo-wasd-gh/webtoolkit/cors"
@@ -22,7 +22,7 @@ type App struct {
 	Production bool
 	Views      map[string]*template.Template
 	Log        *logger.Logger
-	DB         *sql.DB
+	DB         *sqlx.DB
 	Secret     string
 }
 
@@ -33,32 +33,37 @@ var publicFS embed.FS
 var viewFS embed.FS
 
 func main() {
-	cfg, err := config.Init()
+	// Configure environment in config/config.go
+	env, err := config.Init()
 	if err != nil {
 		log.Fatalf("%v", logger.Errorf("failed to initialize config: %v", err))
 	}
 
+	// Configure views in config/views.go
 	views, err := views.Init(viewFS, config.ViewMap, config.FuncMap)
 	if err != nil {
 		log.Fatalf("%v", logger.Errorf("failed to initialize views: %v", err))
 	}
 
-	db, err := database.Init(cfg.DBConnDvr, cfg.DBConnStr)
+	// Defaults to "sqlite3" and "./db.db" if not set
+	db, err := database.Init(env.DBConnDvr, env.DBConnStr)
 	if err != nil {
 		log.Fatalf("%v", logger.Errorf("failed to initialize database: %v", err))
 	}
 	defer db.Close()
 
 	app := &App{
-		Production: cfg.Production,
+		Production: env.Production,
 		Views:      views,
-		Log:        &logger.Logger{Enabled: cfg.Debug},
+		Log:        &logger.Logger{Enabled: env.Debug},
 		DB:         db,
-		Secret:     cfg.Secret,
+		Secret:     env.Secret,
 	}
 
+	// Handlers
 	http.HandleFunc("/dashboard", app.handleDashboard)
 
+	// Serve files in public/
 	staticFiles, err := fs.Sub(publicFS, "public")
 	if err != nil {
 		log.Fatalf("%v", logger.Errorf("failed to create sub filesystem: %v", err))
@@ -70,9 +75,9 @@ func main() {
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		app.Log.Printf("starting on :%s...", cfg.Port)
+		app.Log.Printf("starting on :%s...", env.Port)
 
-		if err := http.ListenAndServe(":"+cfg.Port, nil); err != nil {
+		if err := http.ListenAndServe(":"+env.Port, nil); err != nil {
 			log.Fatalf("%v", logger.Errorf("failed to start server: %v", err))
 		}
 	}()
@@ -85,21 +90,47 @@ func (app *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.Log.Printf("New dashboard request")
+	var schema = `
+		CREATE TABLE data (
+		title NOT NULL,
+		message NOT NULL
+		);`
+	app.DB.MustExec(schema)
 
 	type Data struct {
-		Title   string
-		Message string
+		Title   string `db:"title"`
+		Message string `db:"message"`
 	}
 
-	data := Data{
-		Title:   "Dashboard",
-		Message: "Welcome to your dashboard!",
+	// Logging example
+	app.Log.Printf("New dashboard request")
+
+	// Batch insert
+	insertData := []Data{
+		{Title: "One", Message: "Foo"},
+		{Title: "Two", Message: "Bar"},
 	}
 
-	err := app.Views["dashboard"].Execute(w, data)
-	if err != nil {
+	if _, err := app.DB.NamedExec(
+		`INSERT INTO data (title, message) VALUES (:title, :message)`,
+		insertData,
+	); err != nil {
+		app.Log.Errorf("error inserting into db: %v", err)
+		http.Error(w, "user error", http.StatusInternalServerError)
+	}
+
+	// Batch query
+	data := []Data{}
+
+	if err := app.DB.Select(&data, "SELECT * FROM data"); err != nil {
+		app.Log.Errorf("error querying from db: %v", err)
+		http.Error(w, "user error", http.StatusInternalServerError)
+	}
+
+	// Render view
+	if err := views.Render(w, app.Views["dashboard.html"], data); err != nil {
 		app.Log.Errorf("Error rendering template: %v", err)
-		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 }
