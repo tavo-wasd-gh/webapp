@@ -85,6 +85,8 @@ func (app *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	app.Log.Printf("New dashboard request")
+
 	type Data struct {
 		Title   string
 		Message string
@@ -97,6 +99,7 @@ func (app *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	err := app.Views["dashboard"].Execute(w, data)
 	if err != nil {
+		app.Log.Errorf("Error rendering template: %v", err)
 		http.Error(w, "Error rendering template", http.StatusInternalServerError)
 	}
 }
