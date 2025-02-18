@@ -91,7 +91,7 @@ func (app *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Logging example
-	app.Log.Printf("New dashboard request")
+	app.Log.Printf("new dashboard request")
 
 	// Database example
 	var schema = `
